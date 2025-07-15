@@ -1,4 +1,3 @@
-
 import os
 from flask import Flask, request
 import telegram
@@ -37,19 +36,4 @@ def webhook():
             )
             bot.send_message(chat_id=chat_id, text=f"Please confirm your email: {text}", reply_markup=keyboard)
         elif step == "confirm_email":
-            if text == "✅ Yes":
-                bot.send_message(chat_id=chat_id, text="Perfect! 🎉 Here's the group link:
-👉 https://t.me/ASforexteamfree")
-                user_state.pop(chat_id)
-            elif text == "❌ No":
-                user_state[chat_id]["step"] = "ask_email"
-                bot.send_message(chat_id=chat_id, text="Okay, please enter your correct email:")
-
-    return 'ok'
-
-@app.route('/')
-def index():
-    return 'Bot is running!'
-
-if __name__ == '__main__':
-    app.run(port=8080)
+            if
