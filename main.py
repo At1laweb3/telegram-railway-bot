@@ -1,22 +1,29 @@
 import os
 from flask import Flask, request
-import telegram
+from telegram import Update, Bot
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 TOKEN = os.environ.get("TOKEN")
-bot = telegram.Bot(token=TOKEN)
+bot = Bot(token=TOKEN)
 
 app = Flask(__name__)
 
-@app.route(f"/{TOKEN}", methods=["POST"])
-def receive_update():
-    update = telegram.Update.de_json(request.get_json(force=True), bot)
-    if update.message and update.message.text == "/start":
-        bot.send_message(chat_id=update.message.chat_id, text="Bot is live and responding! ✅")
-    return "OK", 200
+# Telegram command handler
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("Bot is alive and responding ✅")
 
-@app.route("/", methods=["GET"])
+# Create telegram app
+application = ApplicationBuilder().token(TOKEN).build()
+application.add_handler(CommandHandler("start", start))
+
+@app.route(f"/{TOKEN}", methods=["POST"])
+def webhook():
+    update = Update.de_json(request.get_json(force=True), bot)
+    return application.process_update(update)
+
+@app.route("/")
 def index():
-    return "Bot is running!", 200
+    return "Bot is running!"
 
 if __name__ == "__main__":
-    app.run(port=8080)
+    app.run(debug=True)
