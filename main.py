@@ -25,9 +25,19 @@ user_data_store = {}
 
 # Extract only name from text
 def extract_name(raw_text):
-    name_matches = re.findall(r"[A-ZŠĐČĆŽ][a-zšđčćž]+\s+[A-ZŠĐČĆŽ][a-zšđčćž]+", raw_text)
+    name_matches = re.findall(r"[A-ZŠĐČĆŽ][a-zšđčćž]+(?:\s+[A-ZŠĐČĆŽ][a-zšđčćž]+)+", raw_text)
     return name_matches[0] if name_matches else raw_text.strip()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Pozdrav!\n\n"
+        "Dobrodošao! Mi smo tim koji se bavi Forexom preko 8 godina i imamo više od 5000 zadovoljnih studenata. 📈\n"
+        "Iz dana u dan kačimo profite naših članova!\n\n"
+        "Pocnimo!\nKako se zoveš? 👇"
+    )
+    return ASK_NAME
+
+async def ask_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    raw_name = update.message.text
+    name = extract_name(raw_name)
+    user_data_store[update.effective_user.id] = {"name":_]()
