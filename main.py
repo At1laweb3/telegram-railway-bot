@@ -20,12 +20,20 @@ logging.basicConfig(level=logging.INFO)
 NAME, EMAIL, CONFIRM_EMAIL, PHONE = range(4)
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("👋 Pozdrav! Dobrodošao u Forex tim.\n\nKako se zoveš?")
+    await update.message.reply_text(
+        "👋 Pozdrav!\n\n"
+        "Dobrodošao! Mi smo tim koji se bavi Forexom preko 8 godina i imamo više od 5000 zadovoljnih studenata. 📈\n"
+        "Iz dana u dan kačimo profite naših članova!\n\n"
+        "Počnimo!\nKako se zoveš? 👇"
+    )
     return NAME
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    context.user_data["name"] = update.message.text
-    await update.message.reply_text("✉️ Unesi svoj email:")
+    name = update.message.text
+    context.user_data["name"] = name
+    await update.message.reply_text(
+        f"Super, {name}! 💬\nSada mi reci svoj email kako bismo ostali u kontaktu 📧👇"
+    )
     return EMAIL
 
 async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
