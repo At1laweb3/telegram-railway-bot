@@ -1,35 +1,28 @@
 import os
 from flask import Flask, request
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import telegram
 
-TOKEN = os.environ.get("BOT_TOKEN")
-WEBHOOK_PATH = f"/{TOKEN}"
-WEBHOOK_URL = f"https://YOUR-RAILWAY-URL.up.railway.app/{TOKEN}"  # zameni sa tvojim URL-om
+TOKEN = os.environ.get('TOKEN')
+bot = telegram.Bot(token=TOKEN)
+URL = f"https://web-production-0ec6c.up.railway.app"  # <-- tvoje Railway URL ovde!
 
 app = Flask(__name__)
-application = ApplicationBuilder().token(TOKEN).build()
 
-# /start komanda
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("Bot je uspešno pokrenut! 🚀")
+@app.route(f'/{TOKEN}', methods=['POST'])
+def respond():
+    update = telegram.Update.de_json(request.get_json(force=True), bot)
+    chat_id = update.message.chat.id
+    message = update.message.text
 
-# dodaj handler za /start
-application.add_handler(CommandHandler("start", start))
+    if message == "/start":
+        bot.send_message(chat_id=chat_id, text="Hello! Your bot is working ✅")
+    
+    return 'ok'
 
-# webhook endpoint
-@app.route(WEBHOOK_PATH, methods=["POST"])
-async def webhook():
-    data = request.get_json(force=True)
-    update = Update.de_json(data, application.bot)
-    await application.process_update(update)
-    return "ok", 200
+@app.route('/')
+def index():
+    return 'Bot is alive!'
 
-# webhook setup (radi samo jednom)
-@app.before_first_request
-def set_webhook():
-    application.bot.set_webhook(url=WEBHOOK_URL)
-
-# start Flask server
-if __name__ == "__main__":
-    app.run(port=8080)
+if __name__ == '__main__':
+    bot.set_webhook(url=f"{URL}/{TOKEN}")
+    app.run(host="0.0.0.0", port=int(os.environ.get('PORT', 8080)))
