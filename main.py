@@ -21,12 +21,18 @@ ASK_NAME, ASK_EMAIL, CONFIRM_EMAIL, ASK_PHONE = range(4)
 user_data_store = {}
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("Zdravo! Dobrodošao u Forex Tim. Kako se zoveš?")
+    await update.message.reply_text("👋 Pozdrav!
+
+Dobrodošao! Mi smo tim koji se bavi Forexom preko 8 godina i imamo više od 5000 zadovoljnih studenata. 📈
+Iz dana u dan kačimo profite naših članova!
+
+Pocnimo!
+Kako se zoveš? 👇")
     return ASK_NAME
 
 async def ask_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_data_store[update.effective_user.id] = {"name": update.message.text}
-    await update.message.reply_text("Unesi svoj email:")
+    await update.message.reply_text("Sada mi reci svoj email kako bismo ostali u kontaktu 📧👇:")
     return ASK_EMAIL
 
 async def confirm_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
