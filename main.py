@@ -5,11 +5,21 @@ from telegram.ext import (
     ContextTypes, CallbackQueryHandler, ConversationHandler
 )
 
-TOKEN = os.getenv("BOT_TOKEN")
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
+TOKEN = os.getenv("BOT_TOKEN")
 ASK_NAME, ASK_EMAIL, CONFIRM_EMAIL, ASK_PHONE = range(4)
 
 user_data_store = {}
+
+# Google Sheets setup
+def get_worksheet():
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    creds = ServiceAccountCredentials.from_json_keyfile_name('telegram-bot-sheet-466011-9e1d39b4b8cf.json', scope)
+    client = gspread.authorize(creds)
+    sheet = client.open("ForexBotUsers").sheet1
+    return sheet
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
@@ -62,11 +72,18 @@ async def handle_email_confirm(update: Update, context: ContextTypes.DEFAULT_TYP
 async def handle_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     contact = update.message.contact
     phone_number = contact.phone_number
-    user_data_store[update.effective_user.id]["phone"] = phone_number
+    user_id = update.effective_user.id
+    user_data_store[user_id]["phone"] = phone_number
 
-    # Ovde ubaci svoj invite link
+    # Save to Google Sheet
+    sheet = get_worksheet()
+    sheet.append_row([
+        user_data_store[user_id].get("name", ""),
+        user_data_store[user_id].get("email", ""),
+        user_data_store[user_id].get("phone", "")
+    ])
+
     invite_link = "https://t.me/ASforexteamfree"
-
     await update.message.reply_text(
         f"Hvala, sve je gotovo! ✅\n\nSada se priključi našoj ekskluzivnoj grupi klikom na link ispod 👇\n\n{invite_link}",
         reply_markup=ReplyKeyboardMarkup([["✅ Join the group"]], resize_keyboard=True)
