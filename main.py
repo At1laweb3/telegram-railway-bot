@@ -29,11 +29,22 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return NAME
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    name = update.message.text
-    context.user_data["name"] = name
-    await update.message.reply_text(
-        f"Super, {name}! 💬\nSada mi reci svoj email kako bismo ostali u kontaktu 📧👇"
-    )
+    full_name = update.message.text.strip()
+    
+    # Ako je duže od 4 reči ili sadrži "zovem se", "moje ime" itd - ignoriši ime
+    lower_name = full_name.lower()
+    if "zovem se" in lower_name or "moje ime" in lower_name or len(full_name.split()) > 3:
+        name_for_sheet = full_name
+        await update.message.reply_text(
+            "Super!\nSada mi reci svoj email kako bismo ostali u kontaktu 📧👇"
+        )
+    else:
+        name_for_sheet = full_name
+        await update.message.reply_text(
+            f"Super, {name_for_sheet}! 💬\nSada mi reci svoj email kako bismo ostali u kontaktu 📧👇"
+        )
+
+    context.user_data["name"] = name_for_sheet
     return EMAIL
 
 async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
