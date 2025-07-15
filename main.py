@@ -36,4 +36,4 @@ def webhook():
             )
             bot.send_message(chat_id=chat_id, text=f"Please confirm your email: {text}", reply_markup=keyboard)
         elif step == "confirm_email":
-            if
+            if text == "✅
