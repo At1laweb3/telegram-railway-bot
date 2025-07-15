@@ -1,90 +1,93 @@
 import logging
 import json
-from telegram import ReplyKeyboardMarkup, KeyboardButton, Update
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler
+import os
+from telegram import Update, KeyboardButton, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters, ConversationHandler
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-import os
 
-# Google Sheets povezivanje
+# Google Sheets setup
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds_json = os.environ.get("GOOGLE_CREDS")
-creds = ServiceAccountCredentials.from_json_keyfile_dict(json.loads(creds_json), scope)
+creds_json = json.loads(os.getenv("GOOGLE_CREDS"))
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 client = gspread.authorize(creds)
 sheet = client.open("ForexBotUsers").sheet1
 
-# Statičke vrednosti
+# Logging
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-ASK_NAME, ASK_EMAIL, CONFIRM_EMAIL, ASK_PHONE = range(4)
-user_data_store = {}
+# Conversation states
+NAME, EMAIL, CONFIRM_EMAIL, PHONE = range(4)
 
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("👋 Pozdrav!
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("👋 Pozdrav! Dobrodošao u Forex tim.\n\nKako se zoveš?")
+    return NAME
 
-Dobrodošao! Mi smo tim koji se bavi Forexom preko 8 godina i imamo više od 5000 zadovoljnih studenata. 📈
-Iz dana u dan kačimo profite naših članova!
+async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["name"] = update.message.text
+    await update.message.reply_text("✉️ Unesi svoj email:")
+    return EMAIL
 
-Pocnimo!
-Kako se zoveš? 👇")
-    return ASK_NAME
-
-async def ask_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user_data_store[update.effective_user.id] = {"name": update.message.text}
-    await update.message.reply_text("Sada mi reci svoj email kako bismo ostali u kontaktu 📧👇:")
-    return ASK_EMAIL
-
-async def confirm_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    user_data_store[update.effective_user.id]["email"] = update.message.text
-    keyboard = [["Da, tačan je", "Želim da ga promenim"]]
+async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    context.user_data["email"] = update.message.text
     await update.message.reply_text(
-        f"Potvrdi email: {update.message.text}",
-        reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True),
+        f"✅ Da li je ovaj email tačan?\n\n{context.user_data['email']}",
+        reply_markup=ReplyKeyboardMarkup(
+            [["Da, tačan je", "Želim da ga promenim"]],
+            one_time_keyboard=True,
+            resize_keyboard=True
+        )
     )
     return CONFIRM_EMAIL
 
-async def handle_email_confirmation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def confirm_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.text == "Želim da ga promenim":
-        await update.message.reply_text("Unesi ponovo svoj email:")
-        return ASK_EMAIL
+        await update.message.reply_text("🔁 Unesi ponovo svoj email:")
+        return EMAIL
     await update.message.reply_text(
-        "Unesi broj telefona klikom na dugme ispod:",
+        "📱 Pošalji broj telefona klikom na dugme ispod:",
         reply_markup=ReplyKeyboardMarkup(
-            [[KeyboardButton("Pošalji broj", request_contact=True)]],
+            [[KeyboardButton("📞 Pošalji kontakt", request_contact=True)]],
             one_time_keyboard=True,
-            resize_keyboard=True,
-        ),
+            resize_keyboard=True
+        )
     )
-    return ASK_PHONE
+    return PHONE
 
-async def ask_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     phone_number = update.message.contact.phone_number
-    user = user_data_store.get(update.effective_user.id, {})
-    user["phone"] = phone_number
-    sheet.append_row([user.get("name", ""), user.get("email", ""), user.get("phone", "")])
+    context.user_data["phone"] = phone_number
+
+    # Save to Google Sheet
+    sheet.append_row([context.user_data["name"], context.user_data["email"], context.user_data["phone"]])
+
     await update.message.reply_text(
-        "Hvala! Evo ti link za našu Telegram grupu:\nhttps://t.me/ASforexteamfree"
+        "✅ Uspešno! Evo linka za pristup grupi:\nhttps://t.me/ASforexteamfree",
+        reply_markup=None
     )
     return ConversationHandler.END
 
-async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_text("Prekinuto. Ako želiš ponovo, pošalji /start.")
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("❌ Proces otkazan.")
     return ConversationHandler.END
 
-if __name__ == "__main__":
+def main():
     app = ApplicationBuilder().token(os.getenv("BOT_TOKEN")).build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
-            ASK_NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, ask_email)],
-            ASK_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_email)],
-            CONFIRM_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, handle_email_confirmation)],
-            ASK_PHONE: [MessageHandler(filters.CONTACT, ask_phone)],
+            NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
+            EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_email)],
+            CONFIRM_EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_email)],
+            PHONE: [MessageHandler(filters.CONTACT, get_phone)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
 
     app.add_handler(conv_handler)
+
     app.run_polling()
+
+if __name__ == "__main__":
+    main()
