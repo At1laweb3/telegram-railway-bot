@@ -1,28 +1,20 @@
-import datetime
 import logging
-import re
+import datetime
+import os
+import json
+from io import StringIO
+from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from telegram import (
-    Update,
-    InlineKeyboardButton,
-    InlineKeyboardMarkup,
-    ReplyKeyboardMarkup,
-    KeyboardButton,
-)
-from telegram.ext import (
-    ApplicationBuilder,
-    CommandHandler,
-    MessageHandler,
-    CallbackQueryHandler,
-    ConversationHandler,
-    ContextTypes,
-    filters,
-)
 
-# Google Sheets autorizacija
+# Google Sheets autorizacija preko environment variable
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds = ServiceAccountCredentials.from_json_keyfile_name("telegram-bot-sheet-466011-f38cd6b3e242.json", scope)
+credentials_json = os.environ.get("GOOGLE_CREDENTIALS_JSON")
+if credentials_json is None:
+    raise ValueError("GOOGLE_CREDENTIALS_JSON env variable not set!")
+creds_dict = json.loads(credentials_json)
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
 client = gspread.authorize(creds)
 sheet = client.open("ForexBotUsers").sheet1
 
@@ -55,6 +47,7 @@ async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
 # Provera emaila
 def is_valid_email(email: str) -> bool:
+    import re
     return re.match(r"[^@]+@[^@]+\.[^@]+", email)
 
 # Email korisnika
@@ -92,7 +85,7 @@ async def confirm_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> i
     if query.data == "yes":
         keyboard = [[KeyboardButton("📱 Pošalji svoj broj telefona", request_contact=True)]]
         reply_markup = ReplyKeyboardMarkup(keyboard, one_time_keyboard=True, resize_keyboard=True)
-        await query.edit_message_text("📞 Pošalji mi svoj broj telefona klikom na dugme ispod:")
+        await query.edit_message_text("📾 Pošalji mi svoj broj telefona klikom na dugme ispod:")
         await context.bot.send_message(chat_id=query.from_user.id, text="⬇️", reply_markup=reply_markup)
         return PHONE
     else:
@@ -116,7 +109,7 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         # Poruka i pozivni link
         await update.message.reply_text(
-            f"Hvala {name}! ✅\nEvo linka za pristup grupi:\n{GROUP_INVITE_LINK}"
+            f"Hvala {name}! ✅\nEvo linka za pristup grupi:\n{GROUP_INVITE_LINK}",
         )
     else:
         await update.message.reply_text("⚠️ Greška pri unosu podataka. Pokušajte ponovo.")
