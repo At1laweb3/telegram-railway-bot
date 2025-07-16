@@ -1,18 +1,28 @@
-import logging
 import datetime
-import os
-import json
-
-from telegram import Update, ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes, ConversationHandler, CallbackQueryHandler
+import logging
+import re
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup,
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+)
+from telegram.ext import (
+    ApplicationBuilder,
+    CommandHandler,
+    MessageHandler,
+    CallbackQueryHandler,
+    ConversationHandler,
+    ContextTypes,
+    filters,
+)
 
-# Google Sheets autorizacija preko environment promeljive
+# Google Sheets autorizacija
 scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-creds_json = os.environ["GOOGLE_CREDENTIALS_JSON"]
-creds_dict = json.loads(creds_json)
-creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+creds = ServiceAccountCredentials.from_json_keyfile_name("telegram-bot-sheet-466011-f38cd6b3e242.json", scope)
 client = gspread.authorize(creds)
 sheet = client.open("ForexBotUsers").sheet1
 
@@ -30,21 +40,21 @@ user_data_store = {}
 
 # /start komanda
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    await update.message.reply_photo(
-        photo="https://i.ibb.co/t8LSb4P/Forex-Welcome-Card.png",
-        caption="👋 Pozdrav!\n\nDobrodošao! Mi smo tim koji se bavi Forexom preko 8 godina i imamo više od 5000 zadovoljnih studenata. 📈\nIz dana u dan kačimo profite naših članova!\n\nPočnimo!\nKako se zoveš? 👇"
+    await update.message.reply_text(
+        "👋 Pozdrav!\n\nDobrodošao! Mi smo tim koji se bavi Forexom preko 8 godina i imamo više od 5000 zadovoljnih studenata. 📈\nIz dana u dan kačimo profite naših članova!\n\nPočnimo!\nKako se zoveš? 👇"
     )
     return NAME
 
 # Ime korisnika
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     user_data_store[update.effective_user.id] = {"name": update.message.text}
-    await update.message.reply_text("Super!\nSada mi reci svoj email kako bismo ostali u kontaktu 📧👇")
+    await update.message.reply_text(
+        f"Super!\nSada mi reci svoj email kako bismo ostali u kontaktu 📧👇"
+    )
     return EMAIL
 
 # Provera emaila
 def is_valid_email(email: str) -> bool:
-    import re
     return re.match(r"[^@]+@[^@]+\.[^@]+", email)
 
 # Email korisnika
@@ -54,6 +64,7 @@ async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text("⚠️ Molimo unesite validan email (npr. ime@email.com):")
         return EMAIL
 
+    # Provera da li email već postoji
     all_emails = sheet.col_values(2)
     if email in all_emails:
         await update.message.reply_text("❗ Ovaj email je već registrovan. Molimo unesite drugi email:")
@@ -61,10 +72,10 @@ async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
     user_data_store[update.effective_user.id]["email"] = email
 
-    keyboard = [[
-        InlineKeyboardButton("✅ Da, tačan je", callback_data="yes"),
-        InlineKeyboardButton("🔁 Želim da promenim", callback_data="no")
-    ]]
+    keyboard = [
+        [InlineKeyboardButton("✅ Da, tačan je", callback_data="yes"),
+         InlineKeyboardButton("🔁 Želim da promenim", callback_data="no")]
+    ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text(
         f"Potvrdite da je ovo vaš email:\n*{email}*",
@@ -100,33 +111,31 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         phone = contact.phone_number
         timestamp = datetime.datetime.now().strftime("%d.%m.%Y %H:%M")
 
+        # Dodavanje u Google Sheet
         sheet.append_row([name, email, phone, timestamp])
 
-        await update.message.reply_text(f"Hvala {name}! ✅\nEvo linka za pristup grupi:\n{GROUP_INVITE_LINK}")
+        # Poruka i pozivni link
+        await update.message.reply_text(
+            f"Hvala {name}! ✅\nEvo linka za pristup grupi:\n{GROUP_INVITE_LINK}"
+        )
     else:
         await update.message.reply_text("⚠️ Greška pri unosu podataka. Pokušajte ponovo.")
     return ConversationHandler.END
 
-# /cancel komanda
+# Prekidanje komande
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     await update.message.reply_text("Prekinuto. Ako želiš da kreneš ispočetka, pošalji /start")
     return ConversationHandler.END
 
-# Glavni deo
 if __name__ == "__main__":
-    application = ApplicationBuilder().token(os.environ["BOT_TOKEN"]).build()
+    application = ApplicationBuilder().token("7994996337:AAE7_WG5Rrq8lrAyKu-718S2rOar1EJPNG0").build()
 
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
             NAME: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_name)],
             EMAIL: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_email)],
-            CONFIRM_EMAIL: [
-                CallbackQueryHandler(confirm_email),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, get_email),
-                MessageHandler(filters.CONTACT, get_phone),
-                CommandHandler("start", start),
-            ],
+            CONFIRM_EMAIL: [CallbackQueryHandler(confirm_email)],
             PHONE: [MessageHandler(filters.CONTACT, get_phone)],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
