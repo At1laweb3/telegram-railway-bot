@@ -6,7 +6,6 @@ from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, fil
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
-from io import StringIO
 
 # Enable logging
 logging.basicConfig(
@@ -31,7 +30,7 @@ sheet = client.open("ForexBotUsers").sheet1
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Zdravo! Dobrodošao u AS Forex grupu!\n\n"
-        "Odmah ćemo te registrovati za potpuno BESPLATAN pristup našoj FREE grupi gde svakodnevno:\n\n"
+        "Odmah ćemo te registrovati za potpuno BESPLATAN pristup našoj grupi gde svakodnevno:\n\n"
         "🔁 Automatski delimo naše rezultate\n"
         "📸 Objavljujemo uspehe članova (preko 5,000 zadovoljnih!)\n"
         "⚡️ Dajemo pravovremene signale\n"
