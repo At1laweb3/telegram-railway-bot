@@ -31,7 +31,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "👋 Zdravo! Dobrodošao u AS Forex grupu!\n\n"
         "Odmah ćemo te registrovati za potpuno BESPLATAN pristup našoj grupi gde svakodnevno:\n\n"
-        "🔁 Automatski delimo naše rezultate\n"
+        "🔁 Delimo nase rezultate i kako smo usli u taj trejd\n"
         "📸 Objavljujemo uspehe članova (preko 5,000 zadovoljnih!)\n"
         "⚡️ Dajemo pravovremene signale\n"
         "📈 Edukujemo i vodimo te kroz tvoj trading napredak\n\n"
@@ -43,7 +43,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def get_name(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data['name'] = update.message.text
-    await update.message.reply_text("Unesi svoj email:")
+    await update.message.reply_text("Super! sada unesi svoj E-mail:")
     return EMAIL
 
 async def get_email(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -92,7 +92,13 @@ async def get_phone(update: Update, context: ContextTypes.DEFAULT_TYPE):
     sheet.append_row([name, email, phone_number, timestamp])
 
     await update.message.reply_text(
-        "✅ Uspešno si registrovan!\n\nKlikni ispod za pristup našoj besplatnoj grupi:\nhttps://t.me/ASforexteamfree"
+        "✅ Uspešno si registrovan!\n\n"
+        "🎉 Dobrodošao u ASForex FREE Grupu!\n"
+        "Ukoliko imaš bilo kakva pitanja ili ti je potrebna pomoć, slobodno se obrati našem timu: @aleksa_asf01\n\n"
+        "📊 Svakodnevno delimo rezultate naših članova i detaljno pokazujemo korake do svakog trejda.\n"
+        "Kada budeš spreman za sledeći korak i želiš pristup VIP grupi, javi se direktno: @imebota\n\n"
+        "👇 Klikni ispod za ulazak u našu besplatnu grupu:\n"
+        "🔗 https://t.me/ASforexteamfree"
     )
     return ConversationHandler.END
 
